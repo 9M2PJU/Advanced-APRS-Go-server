@@ -539,6 +539,9 @@ body { background: var(--bg-base); color: var(--text-base); }
         <button onclick="togglePanel('leaderboard');closeToolsMenu()"
           class="w-full text-left px-4 py-2 hover:bg-gray-700 flex items-center gap-2">
           <span class="opacity-60">🏆</span> Board</button>
+        <button onclick="togglePanel('leaderboard');closeToolsMenu();setTimeout(function(){var el=document.getElementById('net-dashboard-section');if(el)el.scrollIntoView({behavior:'smooth'});},150)"
+          class="w-full text-left px-4 py-2 hover:bg-gray-700 flex items-center gap-2">
+          <span class="opacity-60">📻</span> Net Dashboard</button>
         <hr class="border-gray-700 my-1">
         <button onclick="shareCurrentView();closeToolsMenu()"
           class="w-full text-left px-4 py-2 hover:bg-gray-700 flex items-center gap-2">
@@ -1041,6 +1044,17 @@ body { background: var(--bg-base); color: var(--text-base); }
               style="background:#0ea5e9;color:#fff;">✏</button>
           </div>
 
+          <!-- Online-callsign search: filters currently-heard stations
+               (heard within the last 30 min), click a result to start a
+               conversation with them directly. -->
+          <div class="flex-shrink-0 px-3 py-2" style="border-bottom:1px solid #1e3a5f;">
+            <input type="text" id="msg-online-search" placeholder="Search online callsigns…"
+              style="width:100%;background:#0b1e35;border:1px solid #1e3a5f;border-radius:8px;
+                     padding:6px 10px;color:#e2e8f0;font-size:12px;outline:none;text-transform:uppercase;"
+              oninput="filterOnlineCallsigns(this.value)">
+            <div id="msg-online-results" class="mt-1 space-y-0.5" style="max-height:160px;overflow-y-auto;"></div>
+          </div>
+
           <!-- Empty conversations state -->
           <div id="conv-empty" class="flex-1 flex items-center justify-center p-4">
             <div class="text-center" style="color:#334155;">
@@ -1142,20 +1156,11 @@ body { background: var(--bg-base); color: var(--text-base); }
             <div class="text-center" style="color:#1e3a5f;max-width:320px;">
               <div style="font-size:52px;margin-bottom:12px;opacity:0.6;">💬</div>
               <div class="text-sm mb-6">Select a conversation or tap ✏ to start a new one</div>
-              <div class="text-left" style="background:#0b1e35;border:1px solid #1e3a5f;border-radius:12px;padding:12px;">
-                <div class="text-xs font-bold mb-2" style="color:#38bdf8;">📡 Quick Net Check-in</div>
-                <div class="space-y-1">
-                  <button onclick="applyNetTemplate(0)" class="w-full text-left px-3 py-2 rounded text-xs" style="background:#0d2137;color:#38bdf8;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0d2137'">
-                    <span class="font-bold">APRS Thursday (HOTG)</span><br><span style="color:#64748b;">→ ANSRVR · CQ HOTG …</span>
-                  </button>
-                  <button onclick="applyNetTemplate(1)" class="w-full text-left px-3 py-2 rounded text-xs" style="background:#0d2137;color:#38bdf8;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0d2137'">
-                    <span class="font-bold">APRSPH Thursday</span><br><span style="color:#64748b;">→ APRSPH · HOTG …</span>
-                  </button>
-                  <button onclick="applyNetTemplate(2)" class="w-full text-left px-3 py-2 rounded text-xs" style="background:#0d2137;color:#38bdf8;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0d2137'">
-                    <span class="font-bold">Hamfinity Sunday</span><br><span style="color:#64748b;">→ 9M4GKS · CQ Hamfinity …</span>
-                  </button>
-                </div>
-              </div>
+              <!-- Quick Net Check-in removed from here — duplicated the
+                   sidebar's own "📡 Net Check-in" shortcuts (left column,
+                   below the conversation list), which stays visible at
+                   all times regardless of what's shown in this centre
+                   pane, so there's no need for a second copy here. -->
               <!-- Inline compose: message any callsign directly -->
               <div style="margin-top:14px;">
                 <div style="font-size:11px;color:#334155;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Or message a callsign</div>
@@ -1747,6 +1752,111 @@ body { background: var(--bg-base); color: var(--text-base); }
           <h3 class="text-purple-400 font-bold mb-2 flex items-center"><span class="mr-2">📟</span>Top Devices &amp; Software</h3>
           <p class="text-xs text-gray-500 mb-3">Aggregated from <a href="https://github.com/aprsorg/aprs-deviceid" target="_blank" class="underline">aprs-deviceid</a> tocall database (CC BY-SA 2.0)</p>
           <div id="lb-devices" class="space-y-1 text-xs"></div>
+        </div>
+
+        <!-- ════ NET CHECK-IN DASHBOARD ════ -->
+        <div id="net-dashboard-section" class="bg-gray-800 rounded-lg border border-sky-700 p-4 mb-3">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sky-300 font-bold flex items-center"><span class="mr-2">📻</span>Net Check-in Dashboard</h3>
+            <button onclick="loadNetDashboard()" class="text-xs bg-sky-700 hover:bg-sky-600 px-3 py-1 rounded">🔄 Refresh</button>
+          </div>
+          <p class="text-xs text-gray-500 mb-3">Tracks check-ins to the known nets (APRS Thursday, APRSPH, Hamfinity — same list as the Quick Net Check-in menu). A check-in is any APRS message addressed to one of those callsigns.</p>
+
+          <!-- Summary stats -->
+          <div class="grid grid-cols-4 gap-3 mb-3">
+            <div class="bg-gray-900 rounded border border-gray-700 p-3 text-center">
+              <div class="text-xs text-gray-400 uppercase font-bold mb-1">Total Check-ins</div>
+              <div id="nd-total" class="text-xl font-bold text-sky-400">--</div>
+            </div>
+            <div class="bg-gray-900 rounded border border-gray-700 p-3 text-center">
+              <div class="text-xs text-gray-400 uppercase font-bold mb-1">Unique Ops</div>
+              <div id="nd-unique" class="text-xl font-bold text-emerald-400">--</div>
+            </div>
+            <div class="bg-gray-900 rounded border border-gray-700 p-3 text-center">
+              <div class="text-xs text-gray-400 uppercase font-bold mb-1">This Week</div>
+              <div id="nd-week" class="text-xl font-bold text-amber-400">--</div>
+            </div>
+            <div class="bg-gray-900 rounded border border-gray-700 p-3 text-center">
+              <div class="text-xs text-gray-400 uppercase font-bold mb-1">Latest</div>
+              <div id="nd-latest" class="text-sm font-bold text-white font-mono">--</div>
+            </div>
+          </div>
+
+          <!-- Weekly trend -->
+          <div class="bg-gray-900 rounded p-3 mb-3">
+            <h4 class="text-xs uppercase font-bold text-amber-300 mb-2">📈 Weekly Trend (last 12 weeks)</h4>
+            <div id="nd-weekly-bars" class="flex items-end gap-1 h-20"></div>
+          </div>
+
+          <!-- Hourly distribution -->
+          <div class="bg-gray-900 rounded p-3 mb-3">
+            <h4 class="text-xs uppercase font-bold text-emerald-300 mb-2">🕐 Hourly Distribution (UTC, last 7 days)</h4>
+            <div id="nd-hourly-bars" class="flex items-end gap-0.5 h-16"></div>
+            <div class="flex justify-between text-[9px] text-gray-600 mt-1"><span>00h</span><span>06h</span><span>12h</span><span>18h</span><span>23h</span></div>
+          </div>
+
+          <!-- Device usage -->
+          <div class="bg-gray-900 rounded p-3 mb-3">
+            <h4 class="text-xs uppercase font-bold text-purple-300 mb-2">📟 Device Usage</h4>
+            <div id="nd-devices" class="space-y-1 text-xs"></div>
+          </div>
+
+          <!-- Leaderboard: streaks + top check-ins -->
+          <div class="bg-gray-900 rounded border border-gray-700 mb-3">
+            <div class="p-3 border-b border-gray-700 font-bold text-xs uppercase tracking-widest text-sky-300">
+              🏅 Top Operators &amp; Streaks
+            </div>
+            <table class="w-full text-xs">
+              <thead class="text-gray-500 uppercase border-b border-gray-700">
+                <tr>
+                  <th class="p-2 text-left">#</th>
+                  <th class="p-2 text-left">Callsign</th>
+                  <th class="p-2 text-right">Check-ins</th>
+                  <th class="p-2 text-right">Streak (wks)</th>
+                  <th class="p-2 text-right">Fav Hour</th>
+                  <th class="p-2 text-left">Device</th>
+                </tr>
+              </thead>
+              <tbody id="nd-leaderboard" class="divide-y divide-gray-700 font-mono"></tbody>
+            </table>
+          </div>
+
+          <!-- Personal stats lookup -->
+          <div class="bg-gray-900 rounded p-3 mb-3">
+            <h4 class="text-xs uppercase font-bold text-teal-300 mb-2">👤 My Stats</h4>
+            <div class="flex gap-2 mb-2">
+              <input type="text" id="nd-me-call" placeholder="Callsign (e.g. M0ABC)"
+                class="flex-1 bg-gray-700 p-2 rounded outline-none border border-gray-600 text-white uppercase text-sm">
+              <button onclick="lookupMyNetStats()" class="bg-teal-700 hover:bg-teal-600 px-3 py-2 rounded text-sm font-bold">Look up</button>
+            </div>
+            <div id="nd-me-result" class="text-xs text-gray-300"></div>
+          </div>
+
+          <!-- Archive search -->
+          <div class="bg-gray-900 rounded p-3">
+            <h4 class="text-xs uppercase font-bold text-gray-300 mb-2">🗄 Check-in Archive</h4>
+            <div class="grid grid-cols-4 gap-2 mb-2">
+              <input type="text" id="nd-arch-call" placeholder="Callsign"
+                class="bg-gray-700 p-2 rounded outline-none border border-gray-600 text-white uppercase text-xs">
+              <select id="nd-arch-year" class="bg-gray-700 p-2 rounded outline-none border border-gray-600 text-white text-xs">
+                <option value="">All years</option>
+              </select>
+              <select id="nd-arch-month" class="bg-gray-700 p-2 rounded outline-none border border-gray-600 text-white text-xs">
+                <option value="">All months</option>
+                <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+              </select>
+              <button onclick="searchNetArchive()" class="bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold">Search</button>
+            </div>
+            <table class="w-full text-xs">
+              <thead class="text-gray-500 uppercase border-b border-gray-700">
+                <tr><th class="p-2 text-left">Time (UTC)</th><th class="p-2 text-left">Callsign</th><th class="p-2 text-left">Net</th><th class="p-2 text-left">Message</th></tr>
+              </thead>
+              <tbody id="nd-archive" class="divide-y divide-gray-700"></tbody>
+            </table>
+          </div>
         </div>
 
         <!-- ════ PROPAGATION ANALYTICS (PropView-inspired) ════ -->
@@ -3859,7 +3969,7 @@ function togglePanel(panel) {
   if (panel==='watch')   { renderWatchlist(); }
   if (panel==='alerts')  { loadServerGfRules(); apUpdateNotifSection(); }
   if (panel==='wx') { renderWX(); }
-  if (panel==='leaderboard') { renderLeaderboard(); }
+  if (panel==='leaderboard') { renderLeaderboard(); loadNetDashboard(); }
   if (panel==='utils') { initUtils(); }
 }
 
@@ -4307,7 +4417,14 @@ function renderThread(call) {
 
     // Footer lines below bubble
     if (m.out && m.state === MSG_STATE.FAILED) {
-      bubbleHtml += '<div style="font-size:11px;color:#ef4444;margin-top:2px;">Failed — tap to retry</div>';
+      // Was previously just static text with no way to act on it unless
+      // the recipient happened to be a registered member AND the sender
+      // was logged in — for a plain net check-in (e.g. to 9M4GKS/ANSRVR,
+      // neither of which are site members) tapping "tap to retry" did
+      // nothing at all. This button now always retries via the normal
+      // APRS-IS path regardless of member status.
+      bubbleHtml += '<button onclick="retryFailedMessage(' + i + ',\'' + escapeHtml(call) + '\')" '
+        + 'style="font-size:11px;color:#ef4444;margin-top:2px;background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;">Failed — tap to retry</button>';
       // "Send via APRS Net" if member-to-member
       if (_memberCallsigns && _memberCallsigns.has && _memberCallsigns.has((m.to||'').toUpperCase())
           && localStorage.getItem('aprs-member-token')) {
@@ -4318,7 +4435,7 @@ function renderThread(call) {
     if (m.out && m.state === MSG_STATE.SERVER_SENT) {
       bubbleHtml += '<div style="font-size:11px;color:#f59e0b;margin-top:2px;">↗ Delivered via APRS Net</div>';
     }
-    if (m.out && m.state === MSG_STATE.SENT && m.retries > 0) {
+    if (m.out && (m.state === MSG_STATE.SENT || m.state === MSG_STATE.FAILED) && m.retries > 0) {
       var sups = ['','¹','²','³'];
       bubbleHtml += '<div style="font-size:10px;color:#64748b;margin-top:2px;">' + (sups[Math.min(m.retries+1,3)]||'') + '⁄₃</div>';
     }
@@ -4427,6 +4544,39 @@ function deleteConversation(call) {
 }
 
 /* ── Retry via server ─────────────────────────────────────────────────────── */
+/* ── Retry a failed message via the normal APRS-IS path ──────────────────
+   This is the plain retry for any failed outgoing message (works for
+   check-ins to net reflectors like 9M4GKS/ANSRVR that aren't registered
+   site members — retrySendViaServer below only covers member-to-member
+   direct delivery and never applied here, which is why "tap to retry"
+   previously did nothing for most failed sends). Resends the identical
+   text over the same WS/APRS-IS route sendMsg() itself uses, bumps the
+   retry counter, and re-arms the 90s auto-fail timeout. */
+function retryFailedMessage(idx, call) {
+  if (!myCallsign || !_conversations[call]) return;
+  var m = _conversations[call][idx];
+  if (!m || m.state !== MSG_STATE.FAILED) return;
+
+  m.retries = (m.retries || 0) + 1;
+  m.state = MSG_STATE.SENT;
+  m.ts = Date.now();
+  renderThread(call);
+  renderConversationList();
+
+  const id = String(msgCounter).padStart(2, '0');
+  ws.send(JSON.stringify({type:'tx', packet:`${myCallsign}>APNA,TCPIP*::${call.padEnd(9,' ')}:${m.text}{${id}`}));
+  logChat(`${myCallsign}→${call}`, m.text, 'text-white');
+  msgCounter = (msgCounter % 99) + 1;
+
+  setTimeout(function() {
+    if (m.state === MSG_STATE.SENT) {
+      m.state = MSG_STATE.FAILED;
+      if (_activeConv === call) renderThread(call);
+      renderConversationList();
+    }
+  }, 90000);
+}
+
 function retrySendViaServer(idx, call) {
   var token = localStorage.getItem('aprs-member-token');
   if (!token || !_conversations[call]) return;
@@ -12876,6 +13026,213 @@ function showWxStatus(msg, ok) {
 
 
 // ─── Propagation Analytics (Phase 2) ──────────────────────────────────────────
+// ── Net Check-in Dashboard ──────────────────────────────────────────────
+async function loadNetDashboard() {
+  try {
+    var [statsR, lbR] = await Promise.all([
+      fetch(location.origin + '/api/netcheckins/stats'),
+      fetch(location.origin + '/api/netcheckins/leaderboard?limit=20')
+    ]);
+    if (statsR.ok) renderNetStats(await statsR.json());
+    if (lbR.ok) renderNetLeaderboard(await lbR.json());
+    populateNetArchiveYears();
+  } catch (e) {
+    console.error('loadNetDashboard failed', e);
+  }
+}
+
+function renderNetStats(d) {
+  var el = function(id) { return document.getElementById(id); };
+  if (el('nd-total'))  el('nd-total').innerText  = d.total_checkins;
+  if (el('nd-unique')) el('nd-unique').innerText = d.unique_ops;
+  if (el('nd-week'))   el('nd-week').innerText   = d.this_week;
+  if (el('nd-latest')) {
+    el('nd-latest').innerText = d.latest_call
+      ? d.latest_call + ' — ' + secondsAgo(d.latest_ts)
+      : '--';
+  }
+
+  // Weekly trend bars
+  var wBox = el('nd-weekly-bars');
+  if (wBox && Array.isArray(d.weekly_trend)) {
+    var max = Math.max(1, ...d.weekly_trend);
+    wBox.innerHTML = d.weekly_trend.map(function(c, i) {
+      var h = Math.round((c / max) * 100);
+      var isLast = i === d.weekly_trend.length - 1;
+      return '<div title="Week ' + (i+1) + ': ' + c + ' check-ins" '
+        + 'style="flex:1;height:' + Math.max(h,3) + '%;background:' + (isLast ? '#0ea5e9' : '#0369a1') + ';border-radius:2px 2px 0 0;"></div>';
+    }).join('');
+  }
+
+  // Hourly distribution bars
+  var hBox = el('nd-hourly-bars');
+  if (hBox && Array.isArray(d.hourly_dist)) {
+    var maxH = Math.max(1, ...d.hourly_dist);
+    hBox.innerHTML = d.hourly_dist.map(function(c, h) {
+      var height = Math.round((c / maxH) * 100);
+      return '<div title="' + String(h).padStart(2,'0') + ':00 UTC: ' + c + ' check-ins" '
+        + 'style="flex:1;height:' + Math.max(height,3) + '%;background:#10b981;border-radius:1px 1px 0 0;"></div>';
+    }).join('');
+  }
+
+  // Device usage bars
+  var devBox = el('nd-devices');
+  if (devBox && d.device_usage) {
+    var entries = Object.entries(d.device_usage).sort(function(a,b){ return b[1]-a[1]; });
+    if (entries.length === 0) {
+      devBox.innerHTML = '<div class="text-gray-500">No device data yet.</div>';
+    } else {
+      var maxD = Math.max(...entries.map(function(e){ return e[1]; }));
+      devBox.innerHTML = entries.map(function(e) {
+        var pct = Math.round((e[1] / maxD) * 100);
+        return '<div class="flex items-center gap-2">'
+          + '<div class="w-32 truncate text-gray-300">' + escapeHtml(e[0]) + '</div>'
+          + '<div class="flex-1 bg-gray-800 rounded h-3 overflow-hidden"><div style="width:' + pct + '%;background:#a855f7;" class="h-full"></div></div>'
+          + '<div class="w-8 text-right text-gray-400">' + e[1] + '</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
+}
+
+function renderNetLeaderboard(list) {
+  var tbody = document.getElementById('nd-leaderboard');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-gray-500">No check-ins recorded yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(function(s, i) {
+    return '<tr>'
+      + '<td class="p-2 text-gray-500">' + (i+1) + '</td>'
+      + '<td class="p-2 text-sky-300 font-bold">' + escapeHtml(s.callsign) + '</td>'
+      + '<td class="p-2 text-right">' + s.checkins + '</td>'
+      + '<td class="p-2 text-right">' + (s.streak_weeks > 0 ? s.streak_weeks + ' 🔥' : '-') + '</td>'
+      + '<td class="p-2 text-right">' + String(s.fav_hour).padStart(2,'0') + ':00</td>'
+      + '<td class="p-2 text-gray-400">' + (s.primary_device ? escapeHtml(s.primary_device) : '-') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function lookupMyNetStats() {
+  var call = (document.getElementById('nd-me-call').value || '').trim().toUpperCase();
+  var out = document.getElementById('nd-me-result');
+  if (!call) { if (out) out.innerHTML = '<span class="text-red-400">Enter a callsign.</span>'; return; }
+  if (out) out.innerHTML = 'Looking up…';
+  fetch(location.origin + '/api/netcheckins/me?callsign=' + encodeURIComponent(call))
+    .then(function(r) { return r.json(); })
+    .then(function(s) {
+      if (!out) return;
+      if (!s.checkins) {
+        out.innerHTML = '<span class="text-gray-500">No check-ins found for ' + escapeHtml(call) + '.</span>';
+        return;
+      }
+      out.innerHTML = '<div class="grid grid-cols-2 gap-2">'
+        + '<div>Total check-ins: <b class="text-sky-300">' + s.checkins + '</b></div>'
+        + '<div>Current streak: <b class="text-amber-300">' + s.streak_weeks + ' weeks</b></div>'
+        + '<div>Favourite hour: <b class="text-emerald-300">' + String(s.fav_hour).padStart(2,'0') + ':00 UTC</b></div>'
+        + '<div>Primary device: <b class="text-purple-300">' + (s.primary_device ? escapeHtml(s.primary_device) : 'Unknown') + '</b></div>'
+        + '<div>Last net: <b>' + escapeHtml(s.last_net || '-') + '</b></div>'
+        + '<div>Last heard: <b>' + (s.last_ts ? secondsAgo(s.last_ts) : '-') + '</b></div>'
+        + '</div>';
+    })
+    .catch(function() { if (out) out.innerHTML = '<span class="text-red-400">Lookup failed.</span>'; });
+}
+
+function populateNetArchiveYears() {
+  var sel = document.getElementById('nd-arch-year');
+  if (!sel || sel.dataset.populated) return;
+  sel.dataset.populated = '1';
+  var thisYear = new Date().getUTCFullYear();
+  for (var y = thisYear; y >= thisYear - 5; y--) {
+    var opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    sel.appendChild(opt);
+  }
+}
+
+function searchNetArchive() {
+  var call  = (document.getElementById('nd-arch-call').value || '').trim();
+  var year  = document.getElementById('nd-arch-year').value;
+  var month = document.getElementById('nd-arch-month').value;
+  var params = new URLSearchParams();
+  if (call) params.set('callsign', call);
+  if (year) params.set('year', year);
+  if (month) params.set('month', month);
+  var tbody = document.getElementById('nd-archive');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-500">Searching…</td></tr>';
+  fetch(location.origin + '/api/netcheckins/archive?' + params.toString())
+    .then(function(r) { return r.json(); })
+    .then(function(list) {
+      if (!tbody) return;
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-500">No matching check-ins.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(function(e) {
+        var t = new Date(e.ts * 1000);
+        var timeStr = t.toISOString().slice(0,16).replace('T',' ');
+        return '<tr>'
+          + '<td class="p-2 text-gray-400 font-mono">' + timeStr + '</td>'
+          + '<td class="p-2 text-sky-300 font-bold">' + escapeHtml(e.callsign) + '</td>'
+          + '<td class="p-2 text-gray-400">' + escapeHtml(e.net) + '</td>'
+          + '<td class="p-2 text-gray-300 truncate max-w-xs">' + escapeHtml(e.text) + '</td>'
+          + '</tr>';
+      }).join('');
+    })
+    .catch(function() {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-red-400">Search failed.</td></tr>';
+    });
+}
+
+// ── Online-callsign search (messaging sidebar) ──────────────────────────
+// "Online" here means heard on APRS-IS within the last 30 minutes —
+// there's no persistent connection concept for most APRS stations (they
+// aren't "logged in" the way this site's own members are), so recency of
+// last packet is the closest proxy for "currently reachable".
+function filterOnlineCallsigns(query) {
+  var box = document.getElementById('msg-online-results');
+  if (!box) return;
+  query = (query || '').trim().toUpperCase();
+  if (!query) { box.innerHTML = ''; return; }
+
+  var now = Date.now() / 1000;
+  var onlineWindow = 30 * 60;
+  var myBase = (myCallsign || '').split('-')[0].toUpperCase();
+
+  var matches = Object.keys(stations).filter(function(call) {
+    if (!call.toUpperCase().startsWith(query)) return false;
+    if (call.split('-')[0].toUpperCase() === myBase) return false;
+    var s = stations[call];
+    return s && (now - (s.lastHeard || 0)) <= onlineWindow;
+  }).sort(function(a, b) {
+    return (stations[b].lastHeard || 0) - (stations[a].lastHeard || 0);
+  }).slice(0, 15);
+
+  if (matches.length === 0) {
+    box.innerHTML = '<div class="text-xs text-gray-600 px-2 py-1">No online stations match.</div>';
+    return;
+  }
+
+  box.innerHTML = matches.map(function(call) {
+    var agoStr = secondsAgo(stations[call].lastHeard || 0);
+    return '<button onclick="selectOnlineCallsign(\'' + escapeHtml(call) + '\')" '
+      + 'class="w-full text-left px-2 py-1.5 rounded text-xs flex items-center justify-between" '
+      + 'style="background:#0d2137;color:#e2e8f0;" '
+      + 'onmouseover="this.style.background=\'#1e3a5f\'" onmouseout="this.style.background=\'#0d2137\'">'
+      + '<span class="font-bold text-sky-300">' + escapeHtml(call) + '</span>'
+      + '<span class="text-gray-500">' + agoStr + ' ago</span>'
+      + '</button>';
+  }).join('');
+}
+
+function selectOnlineCallsign(call) {
+  document.getElementById('msg-online-search').value = '';
+  document.getElementById('msg-online-results').innerHTML = '';
+  if (!_conversations[call]) _conversations[call] = [];
+  openConversation(call);
+}
+
 async function loadAnalytics() {
   var summary = document.getElementById('an-summary');
   try {
@@ -13143,7 +13500,7 @@ var PROP_BAND_LABELS = ['0-5', '5-10', '10-20', '20-40', '40-80', '80-160', '160
 // Low (near, cold) -> High (far, hot) distance gradient, one colour per band.
 var PROP_BAND_COLORS = [
   '#0B1D3A', '#1D4ED8', '#3B82F6', '#60A5FA', '#93C5FD',
-  '#FDBA74', '#F97316', '#EA580C', '#DC2626', '#7F1D1D'
+  '#FDBA74', '#F97316', '#EA580C', '#F87171', '#7F1D1D'
 ];
 
 // Segment colour for distance band `bandIndex`: the band's fixed gradient
@@ -13154,18 +13511,40 @@ function _propSegColor(bandIndex, count) {
   return count > 0 ? base : (base + '33'); // '33' hex alpha = ~20% opacity
 }
 
-// A station is treated as "RF heard" if its path does not show a direct
-// internet injection (TCPIP/TCPIP* for verified logins, TCPXX/TCPXX* for
-// unverified ones - both mean the packet entered via the internet side of
-// APRS-IS, not RF). Stations gated from RF via an iGate (e.g.
-// "WIDE1-1,WIDE2-1,qAR,IGATE") still count - only the originating hop
-// matters for propagation purposes.
+// A station is treated as "RF heard" if its path's q construct (qAR/qAO)
+// shows it was gated in fresh from RF at some hop, rather than relayed
+// from elsewhere on the APRS-IS internet feed (qAC/qAS/qAX/qAU/qAI/qAZ).
+// See isRFHeard() below for why a literal TCPIP/TCPXX string check isn't
+// sufficient on its own.
 function isRFHeard(path) {
   if (!path) return false;
-  return path.split(',').every(function (hop) {
-    var clean = hop.trim().replace('*', '');
-    return clean !== 'TCPIP' && clean !== 'TCPXX';
-  });
+  // The previous check only rejected a path if TCPIP/TCPXX appeared
+  // literally in it — but that almost never happens for packets relayed
+  // from elsewhere on the internet (a station in Germany digipeated and
+  // gated locally there has a path like "WIDE1-1,qAR,DB0ABC", no TCPIP
+  // string at all), so nearly everything passed as "RF heard" and the
+  // Propagation Range bar showed HIGH almost permanently regardless of
+  // actual local RF coverage.
+  //
+  // The correct signal is the APRS-IS q construct, which every gated
+  // packet carries: qAR/qAO mean a station heard this packet directly
+  // over RF and gated it in itself (i.e. genuinely local RF reception);
+  // qAC/qAS/qAX/qAU/qAI/qAZ mean the packet arrived via a full/internet
+  // feed rather than being gated fresh from RF at this hop. Only the
+  // former counts as "RF heard" for this bar.
+  var hops = path.split(',').map(function (h) { return h.trim(); });
+  for (var i = 0; i < hops.length; i++) {
+    var clean = hops[i].replace('*', '');
+    if (clean === 'qAR' || clean === 'qAO') return true;
+    if (clean === 'qAC' || clean === 'qAS' || clean === 'qAX'
+        || clean === 'qAU' || clean === 'qAI' || clean === 'qAZ') return false;
+  }
+  // No q construct at all — most likely a raw RF path with no igate hop
+  // yet (rare on this feed, since we only ever see gated traffic), or an
+  // object/malformed packet. Treat as not confirmed RF rather than assume
+  // it is, matching the bar's intent of only lighting up on real local
+  // RF coverage.
+  return false;
 }
 
 function computePropRange() {

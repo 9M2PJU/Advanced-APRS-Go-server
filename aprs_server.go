@@ -1076,6 +1076,7 @@ func main() {
 	loadIGateHistory()
 	loadBanList()
 	loadMOTD()
+	loadNetCheckins()
 	initVAPID()
 	loadPushSubs()
 	go cleanExpiredSessions()
@@ -1194,6 +1195,10 @@ func main() {
 	http.HandleFunc("/api/messages", handleMessages)
 	http.HandleFunc("/api/iss", handleISSPosition)
 	http.HandleFunc("/api/update", basicAuth(handleUpdate))
+	http.HandleFunc("/api/netcheckins/stats", handleNetCheckinStats)
+	http.HandleFunc("/api/netcheckins/leaderboard", handleNetCheckinLeaderboard)
+	http.HandleFunc("/api/netcheckins/me", handleNetCheckinMe)
+	http.HandleFunc("/api/netcheckins/archive", handleNetCheckinArchive)
 
 	log.Printf("Advanced APRS Gateway active on :8080")
 	go startIGateMQTTBroker() // per-member iGate management (TCP :1883)
@@ -1791,6 +1796,20 @@ func handleBroadcasts() {
 				msgStore = msgStore[1:]
 			}
 			msgStoreMu.Unlock()
+			// Net check-in detection: matches msg.To against the known
+			// net destinations (ANSRVR, APRSPH, 9M4GKS) — see
+			// net_checkins.go. TOCALL is the destination field right
+			// after '>' in FROM>TOCALL,PATH:..., used to identify the
+			// sender's software via the aprs-deviceid database.
+			tocall := ""
+			if gt := strings.Index(packet, ">"); gt > 0 {
+				rest := packet[gt+1:]
+				end := strings.IndexAny(rest, ",:")
+				if end > 0 {
+					tocall = rest[:end]
+				}
+			}
+			go recordNetCheckinIfMatch(msg.From, msg.To, msg.Text, tocall)
 		}
 		msg := wsMessage{Type: "rx", Packet: packet}
 		if hasCoords {
