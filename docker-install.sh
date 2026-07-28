@@ -5,7 +5,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/9M2PJU/Advanced-APRS-Go-server/main/docker-install.sh | sh
 #
 # Requires Docker (and optionally docker compose). Pulls the multi-arch image
-# from GHCR, so it runs on amd64, arm64, armv7, 386, ppc64le, s390x.
+# from GHCR, so it runs on amd64 and arm64.
 set -e
 
 IMAGE="ghcr.io/9m2pju/advanced-aprs-go-server:latest"

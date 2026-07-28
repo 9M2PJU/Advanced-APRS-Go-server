@@ -1,9 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Build stage ──────────────────────────────────────────────────────────────
-# Use alpine variant: it publishes manifests for all 6 target architectures
-# (amd64, arm64, arm/v7, 386, ppc64le, s390x). The official Go images do not
-# ship riscv64, so that arch is excluded from the multi-arch build matrix.
+# Multi-arch build targets linux/amd64 and linux/arm64.
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /src
