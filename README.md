@@ -339,6 +339,15 @@ Every push to `main` triggers the deploy workflow (`.github/workflows/deploy.yml
 3. Rebuilds the binary: `go build -o aprs_server .`
 4. Restarts the service: `systemctl restart aprs`
 
+### Docker image CI
+Every push to `main` and every `v*` tag triggers the Docker build workflow
+(`.github/workflows/docker.yml`):
+1. Builds a multi-arch image for `linux/amd64` and `linux/arm64` using buildx
+2. Pushes to `ghcr.io/9m2pju/advanced-aprs-go-server` with tags `latest`,
+   `sha-<short>`, semver ranges, and branch/PR refs
+3. Attaches build provenance attestation (SLSA) and publishes an SBOM
+4. Caches build layers in GitHub Actions cache for fast rebuilds
+
 ### Manual trigger
 GitHub Actions tab → **Deploy to theloxleys** → **Run workflow**.
 
@@ -378,6 +387,7 @@ curl -X POST https://your-domain/api/admin/update -u admin:PASSWORD
 
 | Version | Changes |
 |---------|---------|
+| unreleased | Multi-arch Docker image (amd64, arm64) published to GHCR via GitHub Actions buildx workflow with build provenance attestation; one-line `docker-install.sh` installer; `docker-compose.yml`; multi-stage Dockerfile (golang:1.22-alpine builder, alpine:3.20 runtime, non-root user, healthcheck, bind-mount safe entrypoint); README Docker section; fix POTA fetch endpoint from `/spots` (403) to `/spot/activator` |
 | v2.3.1 | Scrollable member dashboard on desktop and mobile; logical client grouping; real client IP display behind the proxy; per-install WebSocket replacement to prevent stale Android reconnects |
 | v2.3.0 | International iGate regional telemetry, profile mismatch warnings, selected distance units, safer MQTT forwarding and portable callsign history support |
 | v2.2.0 | Per-device 24-hour RF heard history, signal and distance table, health details, CSV export, and remote GitHub firmware update control |
