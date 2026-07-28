@@ -1092,6 +1092,14 @@ body { background: var(--bg-base); color: var(--text-base); }
                   style="background:#0d2137;color:#38bdf8;"
                   onmouseover="this.style.background='#1e3a5f'"
                   onmouseout="this.style.background='#0d2137'">
+                  <span class="font-bold">APRSMY</span>
+                  <span style="color:#64748b;float:right;">APRSMY</span>
+                </button>
+                <button onclick="applyNetTemplate(3)"
+                  class="w-full text-left px-2 py-1.5 rounded text-xs transition-colors"
+                  style="background:#0d2137;color:#38bdf8;"
+                  onmouseover="this.style.background='#1e3a5f'"
+                  onmouseout="this.style.background='#0d2137'">
                   <span class="font-bold">Hamfinity Sunday</span>
                   <span style="color:#64748b;float:right;">9M4GKS</span>
                 </button>
@@ -5331,6 +5339,8 @@ var KNOWN_NETS = [
     destination:'ANSRVR', bodyPrefix:'CQ HOTG ', ansrvrGroup:'HOTG' },
   { name:'APRSPH Thursday',      schedule:'Every Thursday 00:00–23:59 UTC',
     destination:'APRSPH', bodyPrefix:'HOTG ', ansrvrGroup:null },
+  { name:'APRSMY',               schedule:'Every Sunday 00:00–23:59 MYT',
+    destination:'APRSMY', bodyPrefix:'CHECK ', ansrvrGroup:null },
   { name:'Hamfinity Sunday',     schedule:'Every Sunday 00:00–23:59 UTC',
     destination:'9M4GKS', bodyPrefix:'CQ Hamfinity ', ansrvrGroup:null },
   { name:'ANSRVR CQ',            schedule:'Any time',

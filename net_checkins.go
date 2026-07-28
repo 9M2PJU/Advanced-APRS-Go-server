@@ -30,6 +30,7 @@ type netDefinition struct {
 var knownNets = []netDefinition{
 	{Name: "APRS Thursday (HOTG)", Destination: "ANSRVR"},
 	{Name: "APRSPH Thursday", Destination: "APRSPH"},
+	{Name: "APRSMY", Destination: "APRSMY"},
 	{Name: "Hamfinity Sunday", Destination: "9M4GKS"},
 }
 
