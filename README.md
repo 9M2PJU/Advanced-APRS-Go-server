@@ -387,7 +387,7 @@ curl -X POST https://your-domain/api/admin/update -u admin:PASSWORD
 
 | Version | Changes |
 |---------|---------|
-| unreleased | Multi-arch Docker image (amd64, arm64) published to GHCR via GitHub Actions buildx workflow with build provenance attestation; one-line `docker-install.sh` installer; `docker-compose.yml`; multi-stage Dockerfile (golang:1.22-alpine builder, alpine:3.20 runtime, non-root user, healthcheck, bind-mount safe entrypoint); README Docker section; fix POTA fetch endpoint from `/spots` (403) to `/spot/activator` |
+| unreleased | Multi-arch Docker image (amd64, arm64) published to GHCR via GitHub Actions buildx workflow with build provenance attestation; one-line `docker-install.sh` installer; `docker-compose.yml`; multi-stage Dockerfile (golang:1.22-alpine builder, alpine:3.20 runtime, non-root user, healthcheck, bind-mount safe entrypoint); README Docker section; fix POTA fetch endpoint from `/spots` (403) to `/spot/activator`; fix demo mode exit by adding `/exit-demo` route that clears the `aprs_demo` cookie instead of relying on navigation to `/` which left the cookie set |
 | v2.3.1 | Scrollable member dashboard on desktop and mobile; logical client grouping; real client IP display behind the proxy; per-install WebSocket replacement to prevent stale Android reconnects |
 | v2.3.0 | International iGate regional telemetry, profile mismatch warnings, selected distance units, safer MQTT forwarding and portable callsign history support |
 | v2.2.0 | Per-device 24-hour RF heard history, signal and distance table, health details, CSV export, and remote GitHub firmware update control |
