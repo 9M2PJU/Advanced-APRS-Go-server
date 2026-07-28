@@ -1117,6 +1117,7 @@ func main() {
 		http.ServeFile(w, r, "sitemap.xml")
 	})
 	http.HandleFunc("/demo", serveDemo)
+	http.HandleFunc("/exit-demo", serveExitDemo)
 	http.HandleFunc("/mobile", serveMobile)
 	http.HandleFunc("/mobile-app.js", serveMobileJS)
 	http.HandleFunc("/privacy", servePrivacy)
@@ -1262,6 +1263,19 @@ func serveDemo(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	http.ServeFile(w, r, "index.html")
+}
+
+// serveExitDemo clears the demo cookie and returns to the normal dashboard.
+func serveExitDemo(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "aprs_demo",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: false,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func basicAuth(next http.HandlerFunc) http.HandlerFunc {
