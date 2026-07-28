@@ -4,7 +4,7 @@ package main
 //
 // Fetches live activations every 5 minutes from:
 //   SOTA: https://api2.sota.org.uk/api/spots/10/-1   (last 10 spots, all bands)
-//   POTA: https://api.pota.app/spots                 (all current spots)
+//   POTA: https://api.pota.app/spot/activator        (all current spots)
 //
 // Cross-references with APRS stations in the packet history and sends a
 // push notification + WS message when a SOTA/POTA activator is heard.
@@ -138,7 +138,7 @@ func fetchSOTA() ([]SotaPotaEntry, error) {
 
 func fetchPOTA() ([]SotaPotaEntry, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get("https://api.pota.app/spots")
+	resp, err := client.Get("https://api.pota.app/spot/activator")
 	if err != nil {
 		return nil, err
 	}
