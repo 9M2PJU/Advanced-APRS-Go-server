@@ -20,7 +20,7 @@ RUN go build -trimpath -ldflags="-s -w" -o /out/aprs_server .
 # ── Runtime stage ────────────────────────────────────────────────────────────
 FROM alpine:3.20 AS runtime
 
-RUN apk add --no-cache ca-certificates tzdata wget \
+RUN apk add --no-cache ca-certificates tzdata wget su-exec \
     && addgroup -S aprs \
     && adduser -S -G aprs -h /data aprs
 
@@ -52,7 +52,9 @@ EXPOSE 8080 14580 1883
 EXPOSE 14580/udp
 
 ENV DATA_DIR=/data
-USER aprs
+# NOTE: no USER directive here. The entrypoint starts as root, chowns /data
+# (so bind-mounted host directories work), then drops to the aprs user via
+# su-exec. Named volumes inherit aprs ownership from the image already.
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/api/tocalls >/dev/null 2>&1 || exit 1

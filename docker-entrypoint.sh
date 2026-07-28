@@ -1,32 +1,19 @@
 #!/bin/sh
-# docker-entrypoint.sh — ensure runtime config files exist in /data, then exec.
+# docker-entrypoint.sh — prepare /data, then exec the server.
 set -e
 
 DATA_DIR="${DATA_DIR:-/data}"
 cd "$DATA_DIR"
 
-# Runtime state files that must live on the mounted volume so they persist
-# across container restarts. Touch them into existence if missing so the
-# server can write to them.
-RUNTIME_FILES="
-creds.json
-server_config.json
-members.json
-webhooks.json
-apikeys.json
-bans.json
-motd.json
-audit.log
-igate_history.json
-performance_history.jsonl
-vapid.json
-"
-
-for f in $RUNTIME_FILES; do
-  if [ ! -e "$DATA_DIR/$f" ]; then
-    touch "$DATA_DIR/$f" 2>/dev/null || true
-  fi
-done
+# Ensure the data directory is writable by the runtime user. When a host
+# directory is bind-mounted (instead of a named volume) it may be owned by
+# root, which would prevent the non-root aprs user from creating state files.
+# We only chown if we are root; under the default named-volume setup this is
+# a no-op because the volume already inherits aprs ownership from the image.
+if [ "$(id -u)" = "0" ]; then
+  chown -R aprs:aprs "$DATA_DIR" 2>/dev/null || true
+  exec su-exec aprs "$@"
+fi
 
 # Hand off to the main process (aprs_server by default)
 exec "$@"
