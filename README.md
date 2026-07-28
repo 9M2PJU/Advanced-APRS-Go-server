@@ -406,3 +406,5 @@ curl -X POST https://your-domain/api/admin/update -u admin:PASSWORD
 GNU General Public License v3.0 — see [LICENCE](LICENCE)
 
 *Advanced APRS Go Server — © 2026 Daren Loxley 2E0LXY*
+
+Docker image, CI workflow, and bug fixes by [9M2PJU](https://hamradio.my)*
