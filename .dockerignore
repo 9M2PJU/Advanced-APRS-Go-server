@@ -1,0 +1,34 @@
+# Build artefacts
+*.exe
+*.bak
+*.py
+index_work.html
+
+# Git
+.git
+.github
+.gitignore
+
+# Runtime state — must never be baked into the image
+creds.json
+server_config.json
+members.json
+webhooks.json
+apikeys.json
+bans.json
+motd.json
+audit.log
+igate_history.json
+igate_history.json.tmp
+performance_history.jsonl
+performance_history.jsonl.tmp
+vapid.json
+
+# Docs / CI / deploy helpers not needed at runtime
+README.md
+LICENCE
+install.sh
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-install.sh

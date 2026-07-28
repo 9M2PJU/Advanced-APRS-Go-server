@@ -1,0 +1,23 @@
+# Advanced APRS Go Server — Docker Compose
+#
+# Run:   docker compose up -d
+# Logs:  docker compose logs -f
+# Stop:  docker compose down
+
+services:
+  aprs:
+    image: ghcr.io/9m2pju/advanced-aprs-go-server:latest
+    container_name: aprs-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"     # HTTP API + web dashboard
+      - "14580:14580"   # APRS-IS TCP
+      - "14580:14580/udp" # APRS-IS UDP
+      - "1883:1883"     # iGate MQTT
+    volumes:
+      - aprs-data:/data
+    environment:
+      - TZ=UTC
+
+volumes:
+  aprs-data:

@@ -180,6 +180,78 @@ ssh root@yourserver 'cd /opt/aprs-gateway && git pull origin main && \
 
 ---
 
+## Installation (Docker)
+
+A multi-arch Docker image is published to the GitHub Container Registry on every
+push to `main` and on every version tag. Supported architectures:
+
+`linux/amd64` · `linux/arm64` · `linux/arm/v7` · `linux/386` · `linux/ppc64le` · `linux/s390x` · `linux/riscv64`
+
+### One-line install (Docker)
+```bash
+curl -fsSL https://raw.githubusercontent.com/9M2PJU/Advanced-APRS-Go-server/main/docker-install.sh | sh
+```
+This pulls `ghcr.io/9m2pju/advanced-aprs-go-server:latest`, starts the
+`aprs-gateway` container with all required ports published and a named volume
+for persistent state, then prints the access URLs.
+
+### Run with Docker
+```bash
+docker run -d \
+  --name aprs-gateway \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -p 14580:14580 \
+  -p 14580:14580/udp \
+  -p 1883:1883 \
+  -v aprs-gateway-data:/data \
+  -e TZ=UTC \
+  ghcr.io/9m2pju/advanced-aprs-go-server:latest
+```
+
+### Run with Docker Compose
+```bash
+curl -fsSL https://raw.githubusercontent.com/9M2PJU/Advanced-APRS-Go-server/main/docker-compose.yml -o docker-compose.yml
+docker compose up -d
+```
+
+### Docker ports
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 8080 | TCP | HTTP API + web dashboard (put your own reverse proxy / TLS in front) |
+| 14580 | TCP | APRS-IS client connections |
+| 14580 | UDP | Hardware tracker UDP submit |
+| 1883 | TCP | iGate MQTT broker |
+
+### Persistent state
+All runtime state (`creds.json`, `server_config.json`, `members.json`,
+`igate_history.json`, etc.) lives under `/data` inside the container. Mount a
+named volume or host directory there so configuration and history survive
+container recreations and image updates.
+
+### First-run setup
+After starting the container, open `http://<host>:8080` in a browser. You will
+be redirected to `/setup` to create the admin credentials on first visit.
+
+### Update to a new image
+```bash
+docker pull ghcr.io/9m2pju/advanced-aprs-go-server:latest
+docker rm -f aprs-gateway
+docker run -d ...   # same flags as above
+```
+Or, with `docker-install.sh`, just re-run the one-liner; it stops and replaces
+the existing container for you.
+
+### Build locally
+```bash
+git clone https://github.com/9M2PJU/Advanced-APRS-Go-server
+cd Advanced-APRS-Go-server
+docker build -t advanced-aprs-go-server .
+docker run -d -p 8080:8080 -p 14580:14580 -p 14580:14580/udp -p 1883:1883 -v aprs-data:/data advanced-aprs-go-server
+```
+
+---
+
 ## Connecting Clients
 
 ### APRSDroid / Direwolf / YAAC / APRSIS32
